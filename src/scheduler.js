@@ -225,21 +225,43 @@ async function runWeekStart(discordClient, dryRun = false) {
 
   // Build the effective config for this week. Any fields not set by staff via /setweek
   // are filled in automatically using weighted random selection based on boss history.
-  // allowWilderness defaults to true — set to false via /setweek to exclude wilderness bosses.
-  const allowWilderness = pendingConfig.allowWilderness !== false;
-
   const effectiveConfig = { ...pendingConfig };
   const autoPicked = {}; // tracks which categories were auto-picked so we update history later
 
-  // Helper: apply auto-pick to a category if its boss field is missing
+  // Returns true if the given boss name is flagged as a wilderness boss.
+  function isBossWilderness(bossName) {
+    if (!bossName) return false;
+    const entry = [...bosses.ALL_BOSSES, ...bosses.SLAYER_BOSSES].find((b) => b.value === bossName);
+    return entry ? entry.wilderness === true : false;
+  }
+
+  // Returns true if any boss already set in effectiveConfig this week is a wilderness boss.
+  // Used to enforce the rule: at most one wilderness boss per week.
+  function aWildernessBossIsAlreadySet() {
+    return [
+      effectiveConfig.soloMidgameBoss,
+      effectiveConfig.groupMidgameBoss,
+      effectiveConfig.soloEndgameBoss,
+      effectiveConfig.groupEndgameBoss,
+      effectiveConfig.slayerBoss,
+    ].some(isBossWilderness);
+  }
+
+  // Auto-fills a boss field if staff left it blank.
+  // If a wilderness boss has already been set anywhere this week (by staff or by an
+  // earlier auto-pick), wilderness bosses are excluded from this pick's pool so the
+  // week never has more than one wilderness boss.
   function autoFillBoss(bossField, kcField, category, pool, kcMultiplier = 2) {
     if (!effectiveConfig[bossField]) {
-      const filteredPool = allowWilderness ? pool : pool.filter((b) => !b.wilderness);
-      const picked = pickBossForCategory(category, filteredPool.length > 0 ? filteredPool : pool);
+      const filteredPool = aWildernessBossIsAlreadySet()
+        ? pool.filter((b) => !b.wilderness)
+        : pool;
+      const eligiblePool = filteredPool.length > 0 ? filteredPool : pool;
+      const picked = pickBossForCategory(category, eligiblePool);
       effectiveConfig[bossField] = picked;
-      effectiveConfig[kcField] = autoKcThreshold(picked) * (kcMultiplier / 2); // scale KC
+      effectiveConfig[kcField] = Math.round(autoKcThreshold(picked) * kcMultiplier / 2);
       autoPicked[category] = picked;
-      console.log(`[scheduler] Auto-filled ${bossField}: ${picked} (${effectiveConfig[kcField]} KC)`);
+      console.log(`[scheduler] Auto-filled ${bossField}: ${picked} (${effectiveConfig[kcField]} KC)${isBossWilderness(picked) ? ' [Wilderness]' : ''}`);
     }
   }
 

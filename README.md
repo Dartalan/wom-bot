@@ -69,7 +69,6 @@ The boss and raid fields have a live-search dropdown — just start typing and p
 | `slayer_kc` | KC players need to reach |
 | `skill_1` | Skill of the Week 1 (searchable dropdown) — leave blank to randomize |
 | `skill_2` | Skill of the Week 2 (searchable dropdown) — leave blank to randomize |
-| `allow_wilderness` | Whether to include wilderness bosses in dropdowns and auto-selection (default: True) |
 | `message` | Optional message included in the weekly announcement (e.g. event notes, reminders) |
 
 ### Using `/setbossrate`
