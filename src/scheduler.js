@@ -488,9 +488,15 @@ function buildAnnouncementEmbed(weekData, pendingConfig, startsAt, endsAt) {
     },
   ];
 
+  // If staff included a message with /setweek, append it to the description
+  const baseDescription = `Good luck everyone! Results from last week will be posted **${reportTimeLabel}**.`;
+  const description = pendingConfig.staffMessage
+    ? `${baseDescription}\n\n📢 ${pendingConfig.staffMessage}`
+    : baseDescription;
+
   return {
     title: `Duke Clan Weekly Competitions — ${weekLabel}`,
-    description: `Good luck everyone! Results from last week will be posted **${reportTimeLabel}**.`,
+    description: description,
     color: 0x2ecc71, // Green
     fields: fields,
     footer: { text: 'Competitions tracked via Wise Old Man' },

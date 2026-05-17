@@ -58,6 +58,9 @@ const slashCommandDefinitions = [
     )
     .addStringOption((option) =>
       option.setName('skill_2').setDescription('Skill of the Week 2 — leave blank to randomize').setRequired(false).setAutocomplete(true)
+    )
+    .addStringOption((option) =>
+      option.setName('message').setDescription('Optional message to include in the weekly announcement (e.g. event notes, reminders)').setRequired(false)
     ),
 
   // /preview — shows what pending.json currently has, as a formatted embed
@@ -216,6 +219,7 @@ async function handleSetWeek(interaction) {
     slayerKc: interaction.options.getInteger('slayer_kc'),
     skill1: interaction.options.getString('skill_1') || null,
     skill2: interaction.options.getString('skill_2') || null,
+    staffMessage: interaction.options.getString('message') || null,
     setAt: new Date().toISOString(),
     setBy: interaction.user.tag,
   };
@@ -272,7 +276,8 @@ async function handlePreview(interaction) {
       { name: 'Raid of the Week',   value: withRate(pendingData.raid, pendingData.raidCompletions, 'completions'), inline: true },
       { name: 'Slayer Boss',        value: withRate(pendingData.slayerBoss, pendingData.slayerKc),              inline: true },
       { name: 'Skill of the Week 1', value: pendingData.skill1 || 'Random (chosen on Monday)', inline: true },
-      { name: 'Skill of the Week 2', value: pendingData.skill2 || 'Random (chosen on Monday)', inline: true }
+      { name: 'Skill of the Week 2', value: pendingData.skill2 || 'Random (chosen on Monday)', inline: true },
+      { name: 'Staff Message', value: pendingData.staffMessage || '_(none)_', inline: false }
     )
     .setFooter({ text: 'These settings will go live Monday at 3:00am Central' });
 
