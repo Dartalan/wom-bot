@@ -27,6 +27,12 @@ Discord bot that automatically creates Wise Old Man (WOM) competitions every Mon
 - Keep each file focused on one job only
 - Do not combine files that are currently separate
 
+## Changelog
+- CHANGELOG.md must be updated every time code is pushed to git
+- Add a new dated section at the top for each push
+- Each entry should describe what changed in plain English — not just the technical detail, but why it matters to the clan
+- Group related changes under a short heading within the same push
+
 ## What Claude Should NOT Do
 - Do not refactor working code unless explicitly asked
 - Do not add new dependencies without asking first
