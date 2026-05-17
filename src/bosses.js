@@ -7,101 +7,112 @@
 //   https://oldschool.runescape.wiki/w/Guide:Bossing_Ladder
 // Midgame = Easy / Medium / Hard tier. Endgame = Elite tier and above.
 //
+// groupEligible: true  — multiple players can fight the same boss together
+// groupEligible: false — solo only (instanced per player, or mechanically solo)
+//
 // How autocomplete works: Discord shows the "name" to the user in the dropdown.
 // When they pick one, the "value" is what gets sent to the bot and stored in pending.json.
 // Here, name and value are the same (the human-readable display name like "Kalphite Queen")
 // so pending.json stays easy to read. The getMetricKey() function then converts it
 // to the WOM format (like "kalphite_queen") at competition-creation time.
 
-// Easy / Medium / Hard tier bosses — shown for solo_midgame_boss and group_midgame_boss.
+// Easy / Medium / Hard tier bosses — shown for solo_midgame_boss.
+// Group-filtered version is used for group_midgame_boss.
 const MIDGAME_BOSSES = [
-  { name: 'Abyssal Sire',              value: 'Abyssal Sire' },            // Hard
-  { name: 'Alchemical Hydra',          value: 'Alchemical Hydra' },        // Hard
-  { name: 'Amoxliatl',                 value: 'Amoxliatl' },               // Medium
-  { name: 'Araxxor',                   value: 'Araxxor' },                 // Hard
-  { name: 'Artio',                     value: 'Artio' },                   // Hard
-  { name: 'Barrows Chests',            value: 'Barrows Chests' },          // Easy
-  { name: 'Bryophyta',                 value: 'Bryophyta' },               // Easy
-  { name: "Cal'varion",                value: "Cal'varion" },              // Hard
-  { name: 'Callisto',                  value: 'Callisto' },                // Hard
-  { name: 'Cerberus',                  value: 'Cerberus' },                // Hard
-  { name: 'Chaos Elemental',           value: 'Chaos Elemental' },         // Hard
-  { name: 'Chaos Fanatic',             value: 'Chaos Fanatic' },           // Medium
-  { name: 'Commander Zilyana',         value: 'Commander Zilyana' },       // Hard (Solo)
-  { name: 'Corporeal Beast',           value: 'Corporeal Beast' },         // GWD team boss, Medium-adjacent
-  { name: 'Crazy Archaeologist',       value: 'Crazy Archaeologist' },     // Medium
-  { name: 'Dagannoth Prime',           value: 'Dagannoth Prime' },         // Hard
-  { name: 'Dagannoth Rex',             value: 'Dagannoth Rex' },           // Hard
-  { name: 'Dagannoth Supreme',         value: 'Dagannoth Supreme' },       // Hard
-  { name: 'Deranged Archaeologist',    value: 'Deranged Archaeologist' },  // Easy
-  { name: 'The Gauntlet',              value: 'The Gauntlet' },            // Hard
-  { name: 'Giant Mole',                value: 'Giant Mole' },              // Easy
-  { name: 'Grotesque Guardians',       value: 'Grotesque Guardians' },     // Hard
-  { name: 'Hespori',                   value: 'Hespori' },                 // Medium
-  { name: 'Hueycoatl',                 value: 'Hueycoatl' },               // Medium
-  { name: 'Kalphite Queen',            value: 'Kalphite Queen' },          // Hard
-  { name: 'King Black Dragon',         value: 'King Black Dragon' },       // Medium
-  { name: 'Kraken',                    value: 'Kraken' },                  // Medium
-  { name: "K'ril Tsutsaroth",          value: "K'ril Tsutsaroth" },        // Hard (Solo)
-  { name: 'Mimic',                     value: 'Mimic' },                   // Medium
-  { name: 'Obor',                      value: 'Obor' },                    // Easy
-  { name: 'Sarachnis',                 value: 'Sarachnis' },               // Medium
-  { name: 'Scorpia',                   value: 'Scorpia' },                 // Hard
-  { name: 'Scurrius',                  value: 'Scurrius' },                // Easy
-  { name: 'Skotizo',                   value: 'Skotizo' },                 // Hard
-  { name: 'Spindel',                   value: 'Spindel' },                 // Hard
-  { name: 'Tempoross',                 value: 'Tempoross' },               // Easy
-  { name: 'Thermonuclear Smoke Devil', value: 'Thermonuclear Smoke Devil' }, // Medium
-  { name: 'TzTok-Jad',                 value: 'TzTok-Jad' },              // Hard
-  { name: 'Venenatis',                 value: 'Venenatis' },               // Hard
-  { name: "Vet'ion",                   value: "Vet'ion" },                 // Hard
-  { name: 'Wintertodt',                value: 'Wintertodt' },              // Easy
-  { name: 'Zalcano',                   value: 'Zalcano' },                 // Medium
+  { name: 'Abyssal Sire',              value: 'Abyssal Sire',              groupEligible: false }, // Hard     — solo-only (wiki confirmed)
+  { name: 'Alchemical Hydra',          value: 'Alchemical Hydra',          groupEligible: false }, // Hard     — solo instance
+  { name: 'Amoxliatl',                 value: 'Amoxliatl',                 groupEligible: false }, // Medium   — solo instance
+  { name: 'Araxxor',                   value: 'Araxxor',                   groupEligible: false }, // Hard     — solo-only (wiki confirmed)
+  { name: 'Artio',                     value: 'Artio',                     groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Barrows Chests',            value: 'Barrows Chests',            groupEligible: true  }, // Easy     — multi-combat, group runs common
+  { name: 'Bryophyta',                 value: 'Bryophyta',                 groupEligible: false }, // Easy     — mossy key solo instance
+  { name: "Cal'varion",                value: "Cal'varion",                groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Callisto',                  value: 'Callisto',                  groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Cerberus',                  value: 'Cerberus',                  groupEligible: false }, // Hard     — each player has own Cerberus
+  { name: 'Chaos Elemental',           value: 'Chaos Elemental',           groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Chaos Fanatic',             value: 'Chaos Fanatic',             groupEligible: true  }, // Medium   — wilderness multi-combat
+  { name: 'Commander Zilyana',         value: 'Commander Zilyana',         groupEligible: true  }, // Hard     — GWD group boss
+  { name: 'Corporeal Beast',           value: 'Corporeal Beast',           groupEligible: true  }, // Medium   — classic team boss
+  { name: 'Crazy Archaeologist',       value: 'Crazy Archaeologist',       groupEligible: true  }, // Medium   — wilderness multi-combat
+  { name: 'Dagannoth Prime',           value: 'Dagannoth Prime',           groupEligible: true  }, // Hard     — classic trio boss
+  { name: 'Dagannoth Rex',             value: 'Dagannoth Rex',             groupEligible: true  }, // Hard     — classic trio boss
+  { name: 'Dagannoth Supreme',         value: 'Dagannoth Supreme',         groupEligible: true  }, // Hard     — classic trio boss
+  { name: 'Deranged Archaeologist',    value: 'Deranged Archaeologist',    groupEligible: true  }, // Easy     — open world multi-combat
+  { name: 'The Gauntlet',              value: 'The Gauntlet',              groupEligible: false }, // Hard     — solo only
+  { name: 'Giant Mole',                value: 'Giant Mole',                groupEligible: true  }, // Easy     — multi-combat
+  { name: 'Grotesque Guardians',       value: 'Grotesque Guardians',       groupEligible: false }, // Hard     — solo instance (wiki: "Participants: 1")
+  { name: 'Hespori',                   value: 'Hespori',                   groupEligible: false }, // Medium   — solo instance (wiki confirmed)
+  { name: 'Hueycoatl',                 value: 'Hueycoatl',                 groupEligible: true  }, // Medium   — up to 20 players (wiki confirmed)
+  { name: 'Kalphite Queen',            value: 'Kalphite Queen',            groupEligible: true  }, // Hard     — multi-combat area
+  { name: 'King Black Dragon',         value: 'King Black Dragon',         groupEligible: true  }, // Medium   — multi-combat
+  { name: 'Kraken',                    value: 'Kraken',                    groupEligible: false }, // Medium   — each player wakes own Kraken
+  { name: "K'ril Tsutsaroth",          value: "K'ril Tsutsaroth",          groupEligible: true  }, // Hard     — GWD group boss
+  { name: 'Mimic',                     value: 'Mimic',                     groupEligible: false }, // Medium   — personal casket, solo only
+  { name: 'Obor',                      value: 'Obor',                      groupEligible: false }, // Easy     — giant key solo instance
+  { name: 'Sarachnis',                 value: 'Sarachnis',                 groupEligible: true  }, // Medium   — multi-player dungeon
+  { name: 'Scorpia',                   value: 'Scorpia',                   groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Scurrius',                  value: 'Scurrius',                  groupEligible: true  }, // Easy     — public room confirmed (wiki)
+  { name: 'Skotizo',                   value: 'Skotizo',                   groupEligible: false }, // Hard     — dark totem solo instance
+  { name: 'Spindel',                   value: 'Spindel',                   groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Tempoross',                 value: 'Tempoross',                 groupEligible: true  }, // Easy     — group skilling boss
+  { name: 'Thermonuclear Smoke Devil', value: 'Thermonuclear Smoke Devil', groupEligible: false }, // Medium   — each player spawns own
+  { name: 'TzTok-Jad',                 value: 'TzTok-Jad',                 groupEligible: false }, // Hard     — Fight Cave, solo only
+  { name: 'Venenatis',                 value: 'Venenatis',                 groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: "Vet'ion",                   value: "Vet'ion",                   groupEligible: true  }, // Hard     — wilderness multi-combat
+  { name: 'Wintertodt',                value: 'Wintertodt',                groupEligible: true  }, // Easy     — group skilling boss
+  { name: 'Zalcano',                   value: 'Zalcano',                   groupEligible: true  }, // Medium   — group boss
 ];
 
-// Elite tier and above — shown for solo_endgame_boss and group_endgame_boss.
+// Elite tier and above — shown for solo_endgame_boss.
+// Group-filtered version is used for group_endgame_boss.
 const ENDGAME_BOSSES = [
-  { name: 'The Corrupted Gauntlet',    value: 'The Corrupted Gauntlet' },  // Elite
-  { name: 'Duke Sucellus',             value: 'Duke Sucellus' },           // Elite
-  { name: 'General Graardor',          value: 'General Graardor' },        // Elite (Solo)
-  { name: "Kree'Arra",                 value: "Kree'Arra" },               // Elite (Solo)
-  { name: 'The Leviathan',             value: 'The Leviathan' },           // Elite
-  { name: 'Nex',                       value: 'Nex' },                     // Elite
-  { name: 'The Nightmare',             value: 'The Nightmare' },           // Master
-  { name: 'Phantom Muspah',            value: 'Phantom Muspah' },          // Elite
-  { name: "Phosani's Nightmare",       value: "Phosani's Nightmare" },     // Master
-  { name: 'Sol Heredit',               value: 'Sol Heredit' },             // Master
-  { name: 'TzKal-Zuk',                 value: 'TzKal-Zuk' },              // Master
-  { name: 'Vardorvis',                 value: 'Vardorvis' },               // Elite
-  { name: 'Vorkath',                   value: 'Vorkath' },                 // Elite
-  { name: 'The Whisperer',             value: 'The Whisperer' },           // Elite
-  { name: 'Zulrah',                    value: 'Zulrah' },                  // Elite
+  { name: 'The Corrupted Gauntlet',    value: 'The Corrupted Gauntlet',    groupEligible: false }, // Elite    — solo only
+  { name: 'Duke Sucellus',             value: 'Duke Sucellus',             groupEligible: false }, // Elite    — DT2 solo instance
+  { name: 'General Graardor',          value: 'General Graardor',          groupEligible: true  }, // Elite    — GWD group boss
+  { name: "Kree'Arra",                 value: "Kree'Arra",                 groupEligible: true  }, // Elite    — GWD group boss
+  { name: 'The Leviathan',             value: 'The Leviathan',             groupEligible: false }, // Elite    — DT2 solo instance
+  { name: 'Nex',                       value: 'Nex',                       groupEligible: true  }, // Elite    — group boss
+  { name: 'The Nightmare',             value: 'The Nightmare',             groupEligible: true  }, // Master   — 5-80 players (wiki confirmed)
+  { name: 'Phantom Muspah',            value: 'Phantom Muspah',            groupEligible: false }, // Elite    — solo boss (wiki confirmed)
+  { name: "Phosani's Nightmare",       value: "Phosani's Nightmare",       groupEligible: false }, // Master   — solo variant of Nightmare
+  { name: 'Sol Heredit',               value: 'Sol Heredit',               groupEligible: false }, // Master   — Fortis Colosseum, solo only
+  { name: 'TzKal-Zuk',                 value: 'TzKal-Zuk',                 groupEligible: false }, // Master   — Inferno, solo only
+  { name: 'Vardorvis',                 value: 'Vardorvis',                 groupEligible: false }, // Elite    — DT2 solo instance
+  { name: 'Vorkath',                   value: 'Vorkath',                   groupEligible: false }, // Elite    — solo instance
+  { name: 'The Whisperer',             value: 'The Whisperer',             groupEligible: false }, // Elite    — DT2 solo instance
+  { name: 'Zulrah',                    value: 'Zulrah',                    groupEligible: false }, // Elite    — solo instance
 ];
 
 // All bosses combined — used for /setbossrate autocomplete so staff can search any boss.
 const ALL_BOSSES = [...MIDGAME_BOSSES, ...ENDGAME_BOSSES];
 
+// Midgame bosses that can be done as a group — used for group_midgame_boss autocomplete.
+const GROUP_MIDGAME_BOSSES = MIDGAME_BOSSES.filter((b) => b.groupEligible);
+
+// Endgame bosses that can be done as a group — used for group_endgame_boss autocomplete.
+const GROUP_ENDGAME_BOSSES = ENDGAME_BOSSES.filter((b) => b.groupEligible);
+
 // Bosses commonly assigned by Slayer masters — used for the slayer_boss autocomplete field.
 const SLAYER_BOSSES = [
-  { name: 'Abyssal Sire',              value: 'Abyssal Sire' },
-  { name: 'Alchemical Hydra',          value: 'Alchemical Hydra' },
-  { name: 'Cerberus',                  value: 'Cerberus' },
-  { name: 'Dagannoth Prime',           value: 'Dagannoth Prime' },
-  { name: 'Dagannoth Rex',             value: 'Dagannoth Rex' },
-  { name: 'Dagannoth Supreme',         value: 'Dagannoth Supreme' },
-  { name: 'Grotesque Guardians',       value: 'Grotesque Guardians' },
-  { name: 'Kalphite Queen',            value: 'Kalphite Queen' },
-  { name: 'Kraken',                    value: 'Kraken' },
-  { name: 'Sarachnis',                 value: 'Sarachnis' },
-  { name: 'Scurrius',                  value: 'Scurrius' },
-  { name: 'Skotizo',                   value: 'Skotizo' },
-  { name: 'Thermonuclear Smoke Devil', value: 'Thermonuclear Smoke Devil' },
-  { name: 'Vorkath',                   value: 'Vorkath' },
-  { name: 'Zulrah',                    value: 'Zulrah' },
+  { name: 'Abyssal Sire',              value: 'Abyssal Sire',              groupEligible: false },
+  { name: 'Alchemical Hydra',          value: 'Alchemical Hydra',          groupEligible: false },
+  { name: 'Cerberus',                  value: 'Cerberus',                  groupEligible: false },
+  { name: 'Dagannoth Prime',           value: 'Dagannoth Prime',           groupEligible: true  },
+  { name: 'Dagannoth Rex',             value: 'Dagannoth Rex',             groupEligible: true  },
+  { name: 'Dagannoth Supreme',         value: 'Dagannoth Supreme',         groupEligible: true  },
+  { name: 'Grotesque Guardians',       value: 'Grotesque Guardians',       groupEligible: false },
+  { name: 'Kalphite Queen',            value: 'Kalphite Queen',            groupEligible: true  },
+  { name: 'Kraken',                    value: 'Kraken',                    groupEligible: false },
+  { name: 'Sarachnis',                 value: 'Sarachnis',                 groupEligible: true  },
+  { name: 'Scurrius',                  value: 'Scurrius',                  groupEligible: true  },
+  { name: 'Skotizo',                   value: 'Skotizo',                   groupEligible: false },
+  { name: 'Thermonuclear Smoke Devil', value: 'Thermonuclear Smoke Devil', groupEligible: false },
+  { name: 'Vorkath',                   value: 'Vorkath',                   groupEligible: false },
+  { name: 'Zulrah',                    value: 'Zulrah',                    groupEligible: false },
 ];
 
 // Raids only — used for the raid autocomplete field.
-// All raids are endgame (Elite tier or above).
+// All raids are endgame (Elite tier or above) and all are group eligible.
 const RAIDS = [
   { name: 'Chambers of Xeric',                 value: 'Chambers of Xeric' },           // Master
   { name: 'Chambers of Xeric: Challenge Mode', value: 'Chambers of Xeric: Challenge Mode' }, // Grandmaster
@@ -135,6 +146,8 @@ function getMetricKey(displayName) {
 module.exports = {
   MIDGAME_BOSSES,
   ENDGAME_BOSSES,
+  GROUP_MIDGAME_BOSSES,
+  GROUP_ENDGAME_BOSSES,
   ALL_BOSSES,
   SLAYER_BOSSES,
   RAIDS,
