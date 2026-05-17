@@ -11,11 +11,19 @@ const { startScheduler } = require('./scheduler');
 // Check that the required environment variables are present before trying to start.
 // If any are missing, print a clear error and exit — better to fail early than to
 // crash mysteriously later when a cron job actually tries to use them.
+// These must always be present — the bot cannot function without them
 const requiredEnvVars = [
   'DISCORD_TOKEN',
-  'DISCORD_CHANNEL_ID',
   'WOM_GROUP_ID',
   'WOM_VERIFICATION_CODE',
+];
+
+// These can be set either here in .env OR via /setchannel in Discord.
+// We warn at startup if neither source has them, but don't exit — the bot
+// can still start and staff can run /setchannel to configure them.
+const optionalChannelVars = [
+  'DISCORD_ANNOUNCEMENT_CHANNEL_ID',
+  'DISCORD_STAFF_CHANNEL_ID',
 ];
 
 for (const varName of requiredEnvVars) {
@@ -23,6 +31,15 @@ for (const varName of requiredEnvVars) {
     console.error(`[index] Missing required environment variable: ${varName}`);
     console.error('[index] Copy .env.example to .env and fill in all the values.');
     process.exit(1);
+  }
+}
+
+// Warn about channel vars only if they aren't set in .env AND haven't been saved via /setchannel
+const { resolveChannelId } = require('./storage');
+for (const varName of optionalChannelVars) {
+  const type = varName.includes('ANNOUNCEMENT') ? 'announcement' : 'staff';
+  if (!resolveChannelId(type)) {
+    console.warn(`[index] Warning: no channel configured for "${type}". Use /setchannel in Discord to set it.`);
   }
 }
 

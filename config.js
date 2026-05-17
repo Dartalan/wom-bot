@@ -57,6 +57,8 @@ const config = {
     skillHistory: 'data/skill-history.json',
     // Stores the competition schedule set by /setschedule
     schedule: 'data/schedule.json',
+    // Stores the channel IDs set by /setchannel
+    channels: 'data/channels.json',
   },
 };
 

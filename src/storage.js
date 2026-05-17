@@ -91,6 +91,32 @@ function appendSkillHistory(newSkills) {
   return trimmedHistory;
 }
 
+// Reads the channel configuration from channels.json.
+// Returns an object with announcementChannelId and staffChannelId, either of which may be null.
+function readChannels() {
+  return readJsonFile(config.dataFiles.channels) || {};
+}
+
+// Writes a new channel configuration to channels.json.
+// Called by /setchannel after staff picks a channel in Discord.
+function writeChannels(channelData) {
+  writeJsonFile(config.dataFiles.channels, channelData);
+}
+
+// Returns the active channel ID for a given type ('announcement' or 'staff').
+// Checks channels.json first (set via /setchannel), then falls back to the
+// corresponding environment variable so existing .env setups keep working.
+function resolveChannelId(type) {
+  const channels = readChannels();
+  if (type === 'announcement') {
+    return channels.announcementChannelId || process.env.DISCORD_ANNOUNCEMENT_CHANNEL_ID || null;
+  }
+  if (type === 'staff') {
+    return channels.staffChannelId || process.env.DISCORD_STAFF_CHANNEL_ID || null;
+  }
+  return null;
+}
+
 // Reads the competition schedule from schedule.json.
 // Returns the stored schedule, or null if the file is missing (caller should use the default).
 function readSchedule() {
@@ -104,6 +130,9 @@ function writeSchedule(scheduleData) {
 }
 
 module.exports = {
+  readChannels,
+  writeChannels,
+  resolveChannelId,
   readSchedule,
   writeSchedule,
   readPending,

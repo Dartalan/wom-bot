@@ -1,0 +1,5 @@
+{
+  "_note": "Set these with /setchannel in Discord. If blank, the bot falls back to DISCORD_ANNOUNCEMENT_CHANNEL_ID and DISCORD_STAFF_CHANNEL_ID in .env.",
+  "announcementChannelId": null,
+  "staffChannelId": null
+}

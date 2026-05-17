@@ -3,7 +3,7 @@
 // This file is the "front door" for everything Discord-related.
 // It does NOT contain scheduling logic — that lives in scheduler.js.
 
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags, ChannelType } = require('discord.js');
 const config = require('../config');
 const storage = require('./storage');
 const scheduler = require('./scheduler');
@@ -73,6 +73,23 @@ const slashCommandDefinitions = [
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addBooleanOption((option) =>
       option.setName('dry_run').setDescription('If true, logs what would happen without posting or calling WOM').setRequired(false)
+    ),
+
+  // /setchannel — configure which Discord channels the bot posts to
+  new SlashCommandBuilder()
+    .setName('setchannel')
+    .setDescription('Set which Discord channel the bot posts announcements or staff alerts to')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addStringOption((option) =>
+      option.setName('type').setDescription('Which channel to configure').setRequired(true)
+        .addChoices(
+          { name: 'Announcements & Reports', value: 'announcement' },
+          { name: 'Staff Alerts',            value: 'staff' },
+        )
+    )
+    .addChannelOption((option) =>
+      option.setName('channel').setDescription('The channel to post to').setRequired(true)
+        .addChannelTypes(ChannelType.GuildText)
     ),
 
   // /setschedule — change the day and time competitions start each week
@@ -237,6 +254,40 @@ async function handlePreview(interaction) {
   await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
+// Handles /setchannel — saves a channel ID to channels.json so the bot knows where to post.
+// Reads the existing config first so it only overwrites the one type being changed.
+async function handleSetChannel(interaction) {
+  if (!userHasStaffRole(interaction)) {
+    await interaction.reply({ content: 'You need the Staff role to use this command.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  const type    = interaction.options.getString('type');
+  const channel = interaction.options.getChannel('channel');
+
+  const existing = storage.readChannels() || {};
+
+  const updated = {
+    ...existing,
+    announcementChannelId: type === 'announcement' ? channel.id : (existing.announcementChannelId || null),
+    staffChannelId:        type === 'staff'        ? channel.id : (existing.staffChannelId        || null),
+  };
+
+  try {
+    storage.writeChannels(updated);
+
+    const typeLabel = type === 'announcement' ? 'Announcements & Reports' : 'Staff Alerts';
+    await interaction.reply({
+      content: `Done! **${typeLabel}** will now be posted to <#${channel.id}>.`,
+      flags: MessageFlags.Ephemeral,
+    });
+    console.log(`[bot] /setchannel used by ${interaction.user.tag} — ${typeLabel} → #${channel.name} (${channel.id})`);
+  } catch (error) {
+    console.error('[bot] Error in /setchannel:', error.message);
+    await interaction.reply({ content: `Something went wrong: ${error.message}`, flags: MessageFlags.Ephemeral });
+  }
+}
+
 // Handles /setschedule — saves a new competition start time and immediately restarts the
 // cron jobs so the change takes effect without needing to restart the bot.
 async function handleSetSchedule(interaction, discordClient) {
@@ -380,6 +431,8 @@ async function createAndStartBot() {
         await handleSetWeek(interaction);
       } else if (commandName === 'preview') {
         await handlePreview(interaction);
+      } else if (commandName === 'setchannel') {
+        await handleSetChannel(interaction);
       } else if (commandName === 'setschedule') {
         await handleSetSchedule(interaction, discordClient);
       } else if (commandName === 'report') {

@@ -41,6 +41,7 @@ All commands are restricted to the **Staff** role.
 
 | Command | What it does |
 |---|---|
+| `/setchannel` | Set which Discord channel the bot posts announcements/reports or staff alerts to. |
 | `/setweek` | Set the bosses, raids, thresholds, and optionally the skills for the upcoming week. |
 | `/preview` | Shows what's currently saved for the upcoming week as a formatted embed — use this to double-check before competitions start. |
 | `/setschedule` | Change the day and time competitions start each week. Takes effect immediately — no bot restart needed. |
@@ -116,7 +117,8 @@ node src/index.js
 | Variable | Description |
 |---|---|
 | `DISCORD_TOKEN` | Your Discord bot token |
-| `DISCORD_CHANNEL_ID` | ID of the channel where announcements and reports are posted |
+| `DISCORD_ANNOUNCEMENT_CHANNEL_ID` | (Optional) Channel for weekly announcements and results reports — can be set via `/setchannel` instead |
+| `DISCORD_STAFF_CHANNEL_ID` | (Optional) Channel for staff-only alerts — can be set via `/setchannel` instead |
 | `WOM_GROUP_ID` | Your Wise Old Man group ID |
 | `WOM_VERIFICATION_CODE` | Your Wise Old Man group verification code |
 
@@ -137,7 +139,8 @@ wom-bot/
 │   ├── pending.json        Saved by /setweek, applied at competition start
 │   ├── weeks.json          Active week's competition IDs and config
 │   ├── skill-history.json  Last 8 randomly chosen skills (prevents repeats)
-│   └── schedule.json       Competition schedule saved by /setschedule
+│   ├── schedule.json       Competition schedule saved by /setschedule
+│   └── channels.json       Channel IDs saved by /setchannel
 ├── config.js           Tunable settings (skill list, XP threshold, timezone, default schedule)
 └── .env                Secrets — never commit this file
 ```
@@ -167,3 +170,4 @@ The repeat-avoidance history only applies to **randomly chosen** skills. If staf
 - **Submissions for points** — automatically create a "Submissions for points" competition or post alongside the weekly announcement
 - **Configurable boss dropdowns** — allow each `/setweek` boss category (midgame, endgame, slayer, etc.) to have its own curated dropdown list rather than showing all bosses for every field
 - **Timezone configurability** — remove the hardcoded dependency on Central time so the bot can be used by clans in other timezones
+- **Recommended thresholds** — show suggested XP and KC thresholds per boss/skill in the `/setweek` command so staff have a reference when setting up the week

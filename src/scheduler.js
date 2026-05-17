@@ -265,7 +265,7 @@ async function runWeekStart(discordClient, dryRun = false) {
     console.log('[scheduler] DRY RUN — would post announcement embed:');
     console.log(JSON.stringify(announcementEmbed, null, 2));
   } else {
-    await postToDiscord(discordClient, announcementEmbed);
+    await postToDiscord(discordClient, announcementEmbed, storage.resolveChannelId('announcement'));
   }
 
   console.log('[scheduler] runWeekStart complete.');
@@ -360,10 +360,9 @@ async function runWeekEnd(discordClient, dryRun = false) {
   console.log('[scheduler] runWeekEnd complete.');
 }
 
-// Sends an embed object to the configured Discord channel.
-// The Discord channel ID comes from the environment variable set in .env.
-async function postToDiscord(discordClient, embed) {
-  const channelId = process.env.DISCORD_CHANNEL_ID;
+// Sends an embed object to a specific Discord channel.
+// The channelId is passed by the caller so announcements and staff alerts can go to different channels.
+async function postToDiscord(discordClient, embed, channelId) {
   try {
     const channel = await discordClient.channels.fetch(channelId);
     await channel.send({ embeds: [embed] });
@@ -374,10 +373,13 @@ async function postToDiscord(discordClient, embed) {
   }
 }
 
-// Builds a Discord embed object for the Monday announcement.
-// Shows all six competitions with links to WOM, plus the group boss announcements.
+// Builds a Discord embed object for the weekly announcement.
+// Shows all six competitions with links to WOM, plus the group boss announcements,
+// and a note about when this week's results report will be posted.
 function buildAnnouncementEmbed(weekData, pendingConfig, startsAt, endsAt) {
   const weekLabel = formatWeekLabel(startsAt, endsAt);
+  const schedule = storage.readSchedule() || config.defaultSchedule;
+  const reportTimeLabel = describeReportTime(schedule);
 
   // Build each field of the embed
   const fields = [
@@ -425,7 +427,7 @@ function buildAnnouncementEmbed(weekData, pendingConfig, startsAt, endsAt) {
 
   return {
     title: `Duke Clan Weekly Competitions — ${weekLabel}`,
-    description: 'Good luck everyone! Competitions run Monday to Monday.',
+    description: `Good luck everyone! Results from last week will be posted **${reportTimeLabel}**.`,
     color: 0x2ecc71, // Green
     fields: fields,
     footer: { text: 'Competitions tracked via Wise Old Man' },
@@ -634,7 +636,7 @@ async function postReport(discordClient, weekData, pendingConfig, results, skill
       console.log(JSON.stringify(singleEmbed, null, 2));
     } else {
       console.log('[scheduler] Posting report as a single embed.');
-      await postToDiscord(discordClient, singleEmbed);
+      await postToDiscord(discordClient, singleEmbed, storage.resolveChannelId('announcement'));
     }
     return;
   }
@@ -653,11 +655,12 @@ async function postReport(discordClient, weekData, pendingConfig, results, skill
     return;
   }
 
-  await postToDiscord(discordClient, headerEmbed);
+  const announcementChannelId = storage.resolveChannelId('announcement');
+  await postToDiscord(discordClient, headerEmbed, announcementChannelId);
 
   for (const section of sections) {
     const sectionEmbed = { color, fields: section.fields, footer, timestamp };
-    await postToDiscord(discordClient, sectionEmbed);
+    await postToDiscord(discordClient, sectionEmbed, announcementChannelId);
   }
 }
 
@@ -706,7 +709,7 @@ async function runSetweekReminder(discordClient) {
 
   console.log('[scheduler] /setweek has NOT been set this week — posting reminder.');
 
-  const channelId = process.env.DISCORD_CHANNEL_ID;
+  const channelId = storage.resolveChannelId('staff');
 
   try {
     const channel = await discordClient.channels.fetch(channelId);
@@ -778,6 +781,32 @@ function describeSchedule(schedule) {
   const amPm = schedule.startHour < 12 ? 'am' : 'pm';
   const minute = String(schedule.startMinute).padStart(2, '0');
   return `${day} at ${hour12}:${minute}${amPm} Central`;
+}
+
+// Returns a human-readable description of when the end-of-week report will fire,
+// e.g. "Tuesday at 2:59am Central". Derived from the schedule the same way buildCronExpressions does.
+function describeReportTime(schedule) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const { startDay, startHour, startMinute } = schedule;
+
+  const endMinutesFromMidnight = startHour * 60 + startMinute - 1;
+  let reportMinutesFromMidnight = endMinutesFromMidnight;
+  let reportDayOffset = 1;
+
+  if (reportMinutesFromMidnight < 0) {
+    reportMinutesFromMidnight += 24 * 60;
+    reportDayOffset = 0;
+  }
+
+  const reportDay = (startDay + reportDayOffset) % 7;
+  const reportHour = Math.floor(reportMinutesFromMidnight / 60);
+  const reportMinute = reportMinutesFromMidnight % 60;
+
+  const hour12 = reportHour % 12 || 12;
+  const amPm = reportHour < 12 ? 'am' : 'pm';
+  const minuteStr = String(reportMinute).padStart(2, '0');
+
+  return `${dayNames[reportDay]} at ${hour12}:${minuteStr}${amPm} Central`;
 }
 
 // Holds references to the currently active cron tasks so they can be stopped when
