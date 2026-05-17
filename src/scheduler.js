@@ -10,30 +10,93 @@ const config = require('../config');
 const storage = require('./storage');
 const wom = require('./wom');
 
-// Picks random skills from the noncombat skill list that haven't been used in the last
-// 4 weeks. The additionalExclusions parameter lets the caller exclude extra skills beyond
-// the history — used when one skill competition already exists on WOM and we only need
-// to pick the other one without accidentally duplicating it.
-// Always returns an array of 2 skills (the caller takes [0] or [1] as needed).
-function pickSkillsOfTheWeek(additionalExclusions = []) {
-  const recentSkills = storage.readSkillHistory();
-  const allExclusions = [...recentSkills, ...additionalExclusions];
+// Builds a weight map for every eligible skill based on how recently it was used.
+// Recently used skills get low weight (less likely to be picked) and skills not in the
+// history at all get the highest weight. Nothing is ever fully blocked — this adds
+// randomness while still strongly favouring skills that haven't been used recently.
+//
+// Weight scale:
+//   Used last week:           weight 1  (least likely)
+//   Used 2 weeks ago:         weight 2
+//   ...
+//   Used 9 weeks ago:         weight 9
+//   Not used in 9+ weeks:     weight 10 (most likely)
+//
+// additionalExclusions are hard-excluded entirely (weight 0, not added to the map).
+// Used when one skill competition already exists on WOM and we must avoid duplicating it.
+function buildSkillWeightMap(skillHistory, additionalExclusions) {
+  const lookbackWeeks = config.skillRepeatLookbackWeeks;
+  const freshWeight = lookbackWeeks + 1;
 
-  // Filter the full skill list down to skills not recently used and not explicitly excluded
-  const eligibleSkills = config.noncombatSkills.filter(
-    (skill) => !allExclusions.includes(skill)
-  );
-
-  if (eligibleSkills.length < 2) {
-    // This should never happen since there are 15 skills and we only exclude 8,
-    // but if it somehow does, fall back to the full list to avoid crashing.
-    console.warn('[scheduler] Not enough eligible skills after filtering — using full list as fallback');
-    eligibleSkills.push(...config.noncombatSkills.filter((s) => !additionalExclusions.includes(s)));
+  // Find the most recent position (from the end of the array) each skill appears at.
+  // skillHistory is oldest-first, so position 1 from the end = used last week.
+  const mostRecentPosition = {};
+  for (let i = 0; i < skillHistory.length; i++) {
+    const skill = skillHistory[i];
+    const positionFromEnd = skillHistory.length - i;
+    if (mostRecentPosition[skill] == null || positionFromEnd < mostRecentPosition[skill]) {
+      mostRecentPosition[skill] = positionFromEnd;
+    }
   }
 
-  // Shuffle the eligible skills and take the first two
-  const shuffled = [...eligibleSkills].sort(() => Math.random() - 0.5);
-  return [shuffled[0], shuffled[1]];
+  const weights = {};
+  for (const skill of config.noncombatSkills) {
+    if (additionalExclusions.includes(skill)) continue; // hard exclude
+
+    if (mostRecentPosition[skill] == null) {
+      weights[skill] = freshWeight; // not used recently — highest weight
+    } else {
+      // positions 1-2 = week 1, 3-4 = week 2, etc.
+      const weekNumber = Math.ceil(mostRecentPosition[skill] / 2);
+      weights[skill] = weekNumber;
+    }
+  }
+
+  return weights;
+}
+
+// Picks one skill at random from a weight map using weighted probability.
+// A skill with weight 10 is 10x more likely to be chosen than one with weight 1.
+function weightedRandomPick(weightMap) {
+  const skills = Object.keys(weightMap);
+  const totalWeight = skills.reduce((sum, skill) => sum + weightMap[skill], 0);
+
+  let random = Math.random() * totalWeight;
+  for (const skill of skills) {
+    random -= weightMap[skill];
+    if (random <= 0) return skill;
+  }
+
+  return skills[skills.length - 1]; // floating-point safety fallback
+}
+
+// Picks two skills using weighted random selection. Recently used skills are less likely
+// but never impossible, adding natural variety without ever fully locking out a skill.
+// Logs the weight of each chosen skill so staff can see how the randomness played out.
+// Always returns an array of 2 skills (the caller takes [0] or [1] as needed).
+function pickSkillsOfTheWeek(additionalExclusions = []) {
+  const skillHistory = storage.readSkillHistory();
+  const weights = buildSkillWeightMap(skillHistory, additionalExclusions);
+
+  if (Object.keys(weights).length < 2) {
+    // Safety net — should never happen with 15 skills
+    console.warn('[scheduler] Fewer than 2 weighted skills available — falling back to equal weights');
+    for (const skill of config.noncombatSkills) {
+      if (!additionalExclusions.includes(skill)) weights[skill] = 1;
+    }
+  }
+
+  const skill1 = weightedRandomPick(weights);
+  console.log(`[scheduler] Picked skill 1: ${skill1} (weight ${weights[skill1]})`);
+
+  // Remove skill1 from the pool so we can't pick the same skill twice
+  const weightsForSkill2 = { ...weights };
+  delete weightsForSkill2[skill1];
+
+  const skill2 = weightedRandomPick(weightsForSkill2);
+  console.log(`[scheduler] Picked skill 2: ${skill2} (weight ${weightsForSkill2[skill2]})`);
+
+  return [skill1, skill2];
 }
 
 // Fetches this week's competitions from WOM — any group competition that started

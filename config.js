@@ -9,8 +9,10 @@ const config = {
   // How many XP a player must gain in a Skill of the Week competition to be counted as a completer
   skillXpThreshold: 150000,
 
-  // How many weeks back to check when avoiding skill repeats (4 weeks × 2 skills = 8 entries)
-  skillRepeatLookbackWeeks: 4,
+  // How many weeks of skill history to track. With 15 non-combat skills and 2 picked per week,
+  // 9 weeks covers enough of the pool that weighted randomness (rather than hard exclusion)
+  // keeps the selection feeling varied without ever completely locking out a skill.
+  skillRepeatLookbackWeeks: 9,
 
   // All non-combat skills that are eligible to be randomly chosen as Skill of the Week
   noncombatSkills: [
