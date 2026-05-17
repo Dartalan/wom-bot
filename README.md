@@ -44,7 +44,7 @@ All commands are restricted to the **Staff** role.
 | `/setweek` | Set the bosses, raids, thresholds, and optionally the skills for the upcoming week. |
 | `/preview` | Shows what's currently saved for the upcoming week as a formatted embed — use this to double-check before competitions start. |
 | `/setschedule` | Change the day and time competitions start each week. Takes effect immediately — no bot restart needed. |
-| `/createcompetitions` | Manually triggers competition creation right now. Detects and skips any competitions already created this week — safe to run more than once. Add `dry_run: True` to test without creating anything. |
+| `/createcompetitions` | Manually triggers competition creation right now. **This runs automatically on schedule — you only need this for manual corrections or recovery if the scheduled run failed.** Detects and skips any competitions already created this week — safe to run more than once. Add `dry_run: True` to test without creating anything. |
 | `/report` | Manually triggers the end-of-week results report right now. Add `dry_run: True` to test without posting. |
 
 ### Using `/setweek`
@@ -159,3 +159,11 @@ wom-bot/
 Only players who hit 150k XP in **both** Skill of the Week competitions are listed in the report. Completing just one does not count.
 
 The repeat-avoidance history only applies to **randomly chosen** skills. If staff manually picks a skill via `/setweek`, it will be used regardless of recent history — but it will still be recorded so the random picker avoids it in future weeks.
+
+---
+
+## Todo
+
+- **Submissions for points** — automatically create a "Submissions for points" competition or post alongside the weekly announcement
+- **Configurable boss dropdowns** — allow each `/setweek` boss category (midgame, endgame, slayer, etc.) to have its own curated dropdown list rather than showing all bosses for every field
+- **Timezone configurability** — remove the hardcoded dependency on Central time so the bot can be used by clans in other timezones
