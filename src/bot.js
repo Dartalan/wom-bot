@@ -166,6 +166,10 @@ async function handleAutocomplete(interaction) {
   let choiceList;
   if (optionName === 'skill_1' || optionName === 'skill_2') {
     choiceList = config.noncombatSkills.map((skill) => ({ name: skill, value: skill }));
+  } else if (optionName === 'solo_midgame_boss' || optionName === 'group_midgame_boss') {
+    choiceList = bosses.MIDGAME_BOSSES;
+  } else if (optionName === 'solo_endgame_boss' || optionName === 'group_endgame_boss') {
+    choiceList = bosses.ENDGAME_BOSSES;
   } else if (optionName === 'raid') {
     choiceList = bosses.RAIDS;
   } else if (optionName === 'slayer_boss') {

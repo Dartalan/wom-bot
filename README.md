@@ -192,6 +192,6 @@ The repeat-avoidance history only applies to **randomly chosen** skills. If staf
 ## Todo
 
 - **Submissions for points** — automatically create a "Submissions for points" competition or post alongside the weekly announcement
-- **Configurable boss dropdowns** — allow each `/setweek` boss category (midgame, endgame, slayer, etc.) to have its own curated dropdown list rather than showing all bosses for every field
+- **Configurable boss dropdowns** — ✅ done; midgame fields show Easy/Medium/Hard bosses, endgame fields show Elite+ bosses, raid field shows raids only, slayer field shows slayer bosses
 - **Timezone configurability** — remove the hardcoded dependency on Central time so the bot can be used by clans in other timezones
 - **Recommended thresholds** — ✅ done via `/setbossrate` and `/preview`; skill XP thresholds could also show a recommended weekly goal
