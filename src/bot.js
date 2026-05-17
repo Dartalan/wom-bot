@@ -59,6 +59,9 @@ const slashCommandDefinitions = [
     .addStringOption((option) =>
       option.setName('skill_2').setDescription('Skill of the Week 2 — leave blank to randomize').setRequired(false).setAutocomplete(true)
     )
+    .addBooleanOption((option) =>
+      option.setName('allow_wilderness').setDescription('Include wilderness bosses in auto-selection and dropdowns? Default: True').setRequired(false)
+    )
     .addStringOption((option) =>
       option.setName('message').setDescription('Optional message to include in the weekly announcement (e.g. event notes, reminders)').setRequired(false)
     ),
@@ -167,13 +170,15 @@ async function handleAutocomplete(interaction) {
   if (optionName === 'skill_1' || optionName === 'skill_2') {
     choiceList = config.noncombatSkills.map((skill) => ({ name: skill, value: skill }));
   } else if (optionName === 'solo_midgame_boss') {
-    choiceList = bosses.MIDGAME_BOSSES;
+    const allowWild = interaction.options.getBoolean('allow_wilderness') ?? true;
+    choiceList = allowWild ? bosses.MIDGAME_BOSSES : bosses.MIDGAME_BOSSES.filter((b) => !b.wilderness);
   } else if (optionName === 'group_midgame_boss') {
-    choiceList = bosses.GROUP_MIDGAME_BOSSES;
+    const allowWild = interaction.options.getBoolean('allow_wilderness') ?? true;
+    choiceList = allowWild ? bosses.GROUP_MIDGAME_BOSSES : bosses.GROUP_MIDGAME_BOSSES.filter((b) => !b.wilderness);
   } else if (optionName === 'solo_endgame_boss') {
-    choiceList = bosses.ENDGAME_BOSSES;
+    choiceList = bosses.ENDGAME_BOSSES; // no endgame bosses are wilderness
   } else if (optionName === 'group_endgame_boss') {
-    choiceList = bosses.GROUP_ENDGAME_BOSSES;
+    choiceList = bosses.GROUP_ENDGAME_BOSSES; // no endgame bosses are wilderness
   } else if (optionName === 'raid') {
     choiceList = bosses.RAIDS;
   } else if (optionName === 'slayer_boss') {
@@ -227,6 +232,7 @@ async function handleSetWeek(interaction) {
     slayerKc: interaction.options.getInteger('slayer_kc'),
     skill1: interaction.options.getString('skill_1') || null,
     skill2: interaction.options.getString('skill_2') || null,
+    allowWilderness: interaction.options.getBoolean('allow_wilderness') ?? true,
     staffMessage: interaction.options.getString('message') || null,
     setAt: new Date().toISOString(),
     setBy: interaction.user.tag,

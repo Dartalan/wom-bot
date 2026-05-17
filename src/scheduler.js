@@ -9,6 +9,7 @@ const cron = require('node-cron');
 const config = require('../config');
 const storage = require('./storage');
 const wom = require('./wom');
+const bosses = require('./bosses');
 
 // Builds a weight map for every eligible skill based on how recently it was used.
 // Recently used skills get low weight (less likely to be picked) and skills not in the
@@ -99,6 +100,58 @@ function pickSkillsOfTheWeek(additionalExclusions = []) {
   return [skill1, skill2];
 }
 
+// Builds a weight map for a list of boss entries based on how recently each boss was
+// used in that category. Uses the same weighting system as skills:
+//   Used last week: weight 1 (least likely) … Not in history: weight N+1 (most likely)
+function buildBossWeightMap(categoryHistory, bossPool) {
+  const lookback = config.bossHistoryLookbackWeeks;
+  const freshWeight = lookback + 1;
+
+  const mostRecentPosition = {};
+  for (let i = 0; i < categoryHistory.length; i++) {
+    const bossName = categoryHistory[i];
+    const positionFromEnd = categoryHistory.length - i;
+    if (mostRecentPosition[bossName] == null || positionFromEnd < mostRecentPosition[bossName]) {
+      mostRecentPosition[bossName] = positionFromEnd;
+    }
+  }
+
+  const weights = {};
+  for (const boss of bossPool) {
+    const name = boss.value;
+    weights[name] = mostRecentPosition[name] != null ? mostRecentPosition[name] : freshWeight;
+  }
+
+  return weights;
+}
+
+// Picks a boss for the given category using weighted random selection, then appends it
+// to that category's history so future picks are less likely to repeat it.
+// bossPool is the filtered list of eligible bosses for this category.
+// Returns the chosen boss display name.
+function pickBossForCategory(category, bossPool) {
+  if (bossPool.length === 0) {
+    console.warn(`[scheduler] No bosses available for category "${category}" — this should not happen`);
+    return null;
+  }
+
+  const history = storage.readBossHistory();
+  const categoryHistory = history[category] || [];
+  const weights = buildBossWeightMap(categoryHistory, bossPool);
+  const picked = weightedRandomPick(weights);
+
+  console.log(`[scheduler] Auto-picked ${category} boss: ${picked} (weight ${weights[picked]})`);
+  return picked;
+}
+
+// Returns the auto-generated KC threshold for a boss: 2× the kills/completions per hour.
+// This represents roughly 2 hours of dedicated effort, which is a reasonable weekly challenge.
+// Falls back to 10 KC if no rate is configured for the boss.
+function autoKcThreshold(bossName) {
+  const kph = storage.resolveKillsPerHour(bossName);
+  return Math.max(1, Math.round((kph || 10) * 2));
+}
+
 // Fetches this week's competitions from WOM — any group competition that started
 // within the last 7 days. Used to detect which slots are already filled before
 // deciding what to create.
@@ -168,19 +221,34 @@ function buildWeekDateRange() {
 async function runWeekStart(discordClient, dryRun = false) {
   console.log(`[scheduler] runWeekStart called. dryRun=${dryRun}`);
 
-  const pendingConfig = storage.readPending();
+  const pendingConfig = storage.readPending() || {};
 
-  // Make sure staff ran /setweek before Monday — if not, log the error and stop.
-  if (
-    !pendingConfig ||
-    !pendingConfig.soloMidgameBoss ||
-    !pendingConfig.soloEndgameBoss ||
-    !pendingConfig.raid ||
-    !pendingConfig.slayerBoss
-  ) {
-    console.error('[scheduler] Cannot start week — pending.json is missing required fields. Did staff run /setweek?');
-    return;
+  // Build the effective config for this week. Any fields not set by staff via /setweek
+  // are filled in automatically using weighted random selection based on boss history.
+  // allowWilderness defaults to true — set to false via /setweek to exclude wilderness bosses.
+  const allowWilderness = pendingConfig.allowWilderness !== false;
+
+  const effectiveConfig = { ...pendingConfig };
+  const autoPicked = {}; // tracks which categories were auto-picked so we update history later
+
+  // Helper: apply auto-pick to a category if its boss field is missing
+  function autoFillBoss(bossField, kcField, category, pool, kcMultiplier = 2) {
+    if (!effectiveConfig[bossField]) {
+      const filteredPool = allowWilderness ? pool : pool.filter((b) => !b.wilderness);
+      const picked = pickBossForCategory(category, filteredPool.length > 0 ? filteredPool : pool);
+      effectiveConfig[bossField] = picked;
+      effectiveConfig[kcField] = autoKcThreshold(picked) * (kcMultiplier / 2); // scale KC
+      autoPicked[category] = picked;
+      console.log(`[scheduler] Auto-filled ${bossField}: ${picked} (${effectiveConfig[kcField]} KC)`);
+    }
   }
+
+  autoFillBoss('soloMidgameBoss',  'soloMidgameKc',   'soloMidgame',  bosses.MIDGAME_BOSSES);
+  autoFillBoss('groupMidgameBoss', 'groupMidgameKc',  'groupMidgame', bosses.GROUP_MIDGAME_BOSSES, 3);
+  autoFillBoss('soloEndgameBoss',  'soloEndgameKc',   'soloEndgame',  bosses.ENDGAME_BOSSES);
+  autoFillBoss('groupEndgameBoss', 'groupEndgameKc',  'groupEndgame', bosses.GROUP_ENDGAME_BOSSES, 3);
+  autoFillBoss('raid',             'raidCompletions', 'raid',         bosses.RAIDS);
+  autoFillBoss('slayerBoss',       'slayerKc',        'slayer',       bosses.SLAYER_BOSSES);
 
   // Step 1: Ask WOM what competitions already exist for this week so we know what to skip.
   let existingBySlot = {
@@ -269,10 +337,10 @@ async function runWeekStart(discordClient, dryRun = false) {
   const competitionDefinitions = [
     { key: 'skillOfWeek1Id',    title: `Skill of the Week 1: ${skill1}`,                     metric: wom.skillNameToMetricKey(skill1) },
     { key: 'skillOfWeek2Id',    title: `Skill of the Week 2: ${skill2}`,                     metric: wom.skillNameToMetricKey(skill2) },
-    { key: 'soloMidgameBossId', title: `Solo Midgame Boss: ${pendingConfig.soloMidgameBoss}`, metric: wom.bossNameToMetricKey(pendingConfig.soloMidgameBoss) },
-    { key: 'soloEndgameBossId', title: `Solo Endgame Boss: ${pendingConfig.soloEndgameBoss}`, metric: wom.bossNameToMetricKey(pendingConfig.soloEndgameBoss) },
-    { key: 'raidId',            title: `Raid: ${pendingConfig.raid}`,                         metric: wom.bossNameToMetricKey(pendingConfig.raid) },
-    { key: 'slayerBossId',      title: `Slayer Boss: ${pendingConfig.slayerBoss}`,             metric: wom.bossNameToMetricKey(pendingConfig.slayerBoss) },
+    { key: 'soloMidgameBossId', title: `Solo Midgame Boss: ${effectiveConfig.soloMidgameBoss}`, metric: wom.bossNameToMetricKey(effectiveConfig.soloMidgameBoss) },
+    { key: 'soloEndgameBossId', title: `Solo Endgame Boss: ${effectiveConfig.soloEndgameBoss}`, metric: wom.bossNameToMetricKey(effectiveConfig.soloEndgameBoss) },
+    { key: 'raidId',            title: `Raid: ${effectiveConfig.raid}`,                         metric: wom.bossNameToMetricKey(effectiveConfig.raid) },
+    { key: 'slayerBossId',      title: `Slayer Boss: ${effectiveConfig.slayerBoss}`,             metric: wom.bossNameToMetricKey(effectiveConfig.slayerBoss) },
   ];
 
   // Step 5: For each slot, skip if already on WOM, create if missing.
@@ -312,7 +380,7 @@ async function runWeekStart(discordClient, dryRun = false) {
     skillOfWeek1: skill1,
     skillOfWeek2: skill2,
     competitions: allCompetitionIds,
-    config: pendingConfig,
+    config: effectiveConfig,
   };
 
   if (!dryRun) {
@@ -320,10 +388,15 @@ async function runWeekStart(discordClient, dryRun = false) {
     if (newlyPickedSkills.length > 0) {
       storage.appendSkillHistory(newlyPickedSkills);
     }
+    // Append auto-picked bosses to their category histories so they're less
+    // likely to be picked again in the coming weeks
+    for (const [category, bossName] of Object.entries(autoPicked)) {
+      storage.appendBossHistory(category, bossName);
+    }
   }
 
   // Post the weekly announcement to Discord
-  const announcementEmbed = buildAnnouncementEmbed(weekData, pendingConfig, startsAt, endsAt);
+  const announcementEmbed = buildAnnouncementEmbed(weekData, effectiveConfig, startsAt, endsAt);
   if (dryRun) {
     console.log('[scheduler] DRY RUN — would post announcement embed:');
     console.log(JSON.stringify(announcementEmbed, null, 2));

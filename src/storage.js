@@ -91,6 +91,45 @@ function appendSkillHistory(newSkills) {
   return trimmedHistory;
 }
 
+// Reads the boss history from boss-history.json.
+// Returns an object with one array per category (soloMidgame, groupMidgame, etc.).
+function readBossHistory() {
+  return readJsonFile(config.dataFiles.bossHistory) || {
+    soloMidgame: [], groupMidgame: [], soloEndgame: [],
+    groupEndgame: [], raid: [], slayer: [],
+  };
+}
+
+// Appends a boss name to the given category's history and trims to the lookback window.
+// Called automatically after each week's bosses are determined (auto or manual).
+function appendBossHistory(category, bossName) {
+  const history = readBossHistory();
+  const updated = [...(history[category] || []), bossName]
+    .slice(-config.bossHistoryLookbackWeeks);
+  history[category] = updated;
+  writeJsonFile(config.dataFiles.bossHistory, history);
+}
+
+// Reads per-boss KPH overrides from boss-thresholds.json.
+function readBossThresholds() {
+  return readJsonFile(config.dataFiles.bossThresholds) || {};
+}
+
+// Writes an updated set of boss KPH overrides to boss-thresholds.json.
+function writeBossThresholds(data) {
+  writeJsonFile(config.dataFiles.bossThresholds, data);
+}
+
+// Returns the kills/completions per hour for a given boss display name.
+// Checks boss-thresholds.json for a staff override first, then falls back to config defaults.
+// Returns null if the boss isn't found in either source.
+function resolveKillsPerHour(bossName) {
+  const overrides = readBossThresholds();
+  if (overrides[bossName] != null) return overrides[bossName];
+  if (config.defaultKillsPerHour[bossName] != null) return config.defaultKillsPerHour[bossName];
+  return null;
+}
+
 // Reads the channel configuration from channels.json.
 // Returns an object with announcementChannelId and staffChannelId, either of which may be null.
 function readChannels() {
@@ -130,6 +169,11 @@ function writeSchedule(scheduleData) {
 }
 
 module.exports = {
+  readBossHistory,
+  appendBossHistory,
+  readBossThresholds,
+  writeBossThresholds,
+  resolveKillsPerHour,
   readChannels,
   writeChannels,
   resolveChannelId,

@@ -63,7 +63,14 @@ const config = {
     channels: 'data/channels.json',
     // Stores per-boss kills/completions per hour overrides set by /setbossrate
     bossThresholds: 'data/boss-thresholds.json',
+    // Stores recently used bosses per category for weighted auto-selection
+    bossHistory: 'data/boss-history.json',
   },
+
+  // How many weeks of boss history to track per category for weighted auto-selection.
+  // More weeks = recently used bosses are less likely to repeat. With most categories
+  // having 10+ options, 4 weeks of history provides good variety without full exclusion.
+  bossHistoryLookbackWeeks: 4,
 
   // Default kills (or completions) per hour for each boss/raid, at approximately 75% of
   // what a well-geared experienced player can achieve. Used to show staff a recommended

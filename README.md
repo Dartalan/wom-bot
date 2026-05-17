@@ -69,6 +69,7 @@ The boss and raid fields have a live-search dropdown — just start typing and p
 | `slayer_kc` | KC players need to reach |
 | `skill_1` | Skill of the Week 1 (searchable dropdown) — leave blank to randomize |
 | `skill_2` | Skill of the Week 2 (searchable dropdown) — leave blank to randomize |
+| `allow_wilderness` | Whether to include wilderness bosses in dropdowns and auto-selection (default: True) |
 | `message` | Optional message included in the weekly announcement (e.g. event notes, reminders) |
 
 ### Using `/setbossrate`
@@ -195,54 +196,56 @@ Default kills/completions per hour shown in `/preview` when choosing a KC thresh
 
 ### Midgame bosses (Easy / Medium / Hard tier)
 
-| Boss | Group Eligible | Default KPH | Source |
-|---|---|---|---|
-| Abyssal Sire | No | 29 | Wiki |
-| Alchemical Hydra | No | 19 | Wiki |
-| Amoxliatl | No | 11 | Est. |
-| Araxxor | No | 26 | Wiki |
-| Artio | Yes | 34 | Est. |
-| Barrows Chests | Yes | 11 | Est. |
-| Bryophyta | No | 11 | Est. |
-| Cal'varion | Yes | 26 | Est. |
-| Callisto | Yes | 14 | Est. |
-| Cerberus | No | 38 | Wiki |
-| Chaos Elemental | Yes | 23 | Est. |
-| Chaos Fanatic | Yes | 45 | Est. |
-| Commander Zilyana | Yes | 20 | Wiki |
-| Corporeal Beast | Yes | 8 | Wiki |
-| Crazy Archaeologist | Yes | 45 | Est. |
-| Dagannoth Prime | Yes | 19 | Wiki |
-| Dagannoth Rex | Yes | 19 | Wiki |
-| Dagannoth Supreme | Yes | 19 | Wiki |
-| Deranged Archaeologist | Yes | 45 | Est. |
-| The Gauntlet | No | 5 | Wiki |
-| Giant Mole | Yes | 34 | Est. |
-| Grotesque Guardians | No | 18 | Wiki |
-| Hespori | No | — | Key-gated |
-| Hueycoatl | Yes | 11 | Est. |
-| Kalphite Queen | Yes | 17 | Wiki |
-| King Black Dragon | Yes | 30 | Est. |
-| Kraken | No | 45 | Wiki |
-| K'ril Tsutsaroth | Yes | 20 | Wiki |
-| Mimic | No | — | Casket-gated |
-| Obor | No | 30 | Est. |
-| Sarachnis | Yes | 23 | Wiki |
-| Scorpia | Yes | 45 | Est. |
-| Scurrius | Yes | 21 | Est. |
-| Skotizo | No | — | Totem-gated |
-| Spindel | Yes | 21 | Est. |
-| Tempoross | Yes | 8 | Est. |
-| Thermonuclear Smoke Devil | No | 60 | Wiki |
-| TzTok-Jad | No | 2 | Est. |
-| Venenatis | Yes | 19 | Est. |
-| Vet'ion | Yes | 14 | Est. |
-| Wintertodt | Yes | 8 | Est. |
-| Zalcano | Yes | 11 | Est. |
+| Boss | Group | Wilderness | Default KPH | Source |
+|---|---|---|---|---|
+| Abyssal Sire | No | No | 29 | Wiki |
+| Alchemical Hydra | No | No | 19 | Wiki |
+| Amoxliatl | No | No | 11 | Est. |
+| Araxxor | No | No | 26 | Wiki |
+| Artio | Yes | **Yes** | 34 | Est. |
+| Barrows Chests | Yes | No | 11 | Est. |
+| Bryophyta | No | No | 11 | Est. |
+| Cal'varion | Yes | **Yes** | 26 | Est. |
+| Callisto | Yes | **Yes** | 14 | Est. |
+| Cerberus | No | No | 38 | Wiki |
+| Chaos Elemental | Yes | **Yes** | 23 | Est. |
+| Chaos Fanatic | Yes | **Yes** | 45 | Est. |
+| Commander Zilyana | Yes | No | 20 | Wiki |
+| Corporeal Beast | Yes | No | 8 | Wiki |
+| Crazy Archaeologist | Yes | **Yes** | 45 | Est. |
+| Dagannoth Prime | Yes | No | 19 | Wiki |
+| Dagannoth Rex | Yes | No | 19 | Wiki |
+| Dagannoth Supreme | Yes | No | 19 | Wiki |
+| Deranged Archaeologist | Yes | No | 45 | Est. |
+| The Gauntlet | No | No | 5 | Wiki |
+| Giant Mole | Yes | No | 34 | Est. |
+| Grotesque Guardians | No | No | 18 | Wiki |
+| Hespori | No | No | — | Key-gated |
+| Hueycoatl | Yes | No | 11 | Est. |
+| Kalphite Queen | Yes | No | 17 | Wiki |
+| King Black Dragon | Yes | **Yes** | 30 | Est. |
+| Kraken | No | No | 45 | Wiki |
+| K'ril Tsutsaroth | Yes | No | 20 | Wiki |
+| Mimic | No | No | — | Casket-gated |
+| Obor | No | No | 30 | Est. |
+| Sarachnis | Yes | No | 23 | Wiki |
+| Scorpia | Yes | **Yes** | 45 | Est. |
+| Scurrius | Yes | No | 21 | Est. |
+| Skotizo | No | No | — | Totem-gated |
+| Spindel | Yes | **Yes** | 21 | Est. |
+| Tempoross | Yes | No | 8 | Est. |
+| Thermonuclear Smoke Devil | No | No | 60 | Wiki |
+| TzTok-Jad | No | No | 2 | Est. |
+| Venenatis | Yes | **Yes** | 19 | Est. |
+| Vet'ion | Yes | **Yes** | 14 | Est. |
+| Wintertodt | Yes | No | 8 | Est. |
+| Zalcano | Yes | No | 11 | Est. |
 
 ### Endgame bosses (Elite tier and above)
 
-| Boss | Group Eligible | Default KPH | Source |
+None of the endgame bosses are in the Wilderness.
+
+| Boss | Group | Default KPH | Source |
 |---|---|---|---|
 | The Corrupted Gauntlet | No | 5 | Wiki |
 | Duke Sucellus | No | 26 | Wiki |
@@ -260,7 +263,7 @@ Default kills/completions per hour shown in `/preview` when choosing a KC thresh
 | The Whisperer | No | 15 | Wiki |
 | Zulrah | No | 15 | Wiki |
 
-### Raids (all group eligible, all endgame)
+### Raids (all group eligible, all endgame, none in Wilderness)
 
 | Raid | Default Completions/hr | Source |
 |---|---|---|
