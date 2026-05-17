@@ -75,6 +75,21 @@ const slashCommandDefinitions = [
       option.setName('dry_run').setDescription('If true, logs what would happen without posting or calling WOM').setRequired(false)
     ),
 
+  // /setbossrate — set or reset the kills/completions per hour for a specific boss
+  new SlashCommandBuilder()
+    .setName('setbossrate')
+    .setDescription('Set the estimated kills or completions per hour for a boss (used to show recommended KC in /preview)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addStringOption((option) =>
+      option.setName('boss').setDescription('Boss or raid name — type to search').setRequired(true).setAutocomplete(true)
+    )
+    .addIntegerOption((option) =>
+      option.setName('kills_per_hour').setDescription('Estimated kills or completions per hour').setRequired(false).setMinValue(1)
+    )
+    .addBooleanOption((option) =>
+      option.setName('reset').setDescription('Set to True to remove your override and revert to the built-in default').setRequired(false)
+    ),
+
   // /setchannel — configure which Discord channels the bot posts to
   new SlashCommandBuilder()
     .setName('setchannel')
@@ -147,12 +162,14 @@ async function handleAutocomplete(interaction) {
   // Pick the right list based on which field the user is filling in
   let choiceList;
   if (optionName === 'skill_1' || optionName === 'skill_2') {
-    // Skills come from config, not the bosses file
     choiceList = config.noncombatSkills.map((skill) => ({ name: skill, value: skill }));
   } else if (optionName === 'raid') {
     choiceList = bosses.RAIDS;
   } else if (optionName === 'slayer_boss') {
     choiceList = bosses.SLAYER_BOSSES;
+  } else if (optionName === 'boss') {
+    // /setbossrate — show all bosses and raids combined
+    choiceList = [...bosses.ALL_BOSSES, ...bosses.RAIDS];
   } else {
     choiceList = bosses.ALL_BOSSES;
   }
@@ -233,25 +250,85 @@ async function handlePreview(interaction) {
     return;
   }
 
+  // Build a small helper that appends the recommended KC rate to a field value
+  // so staff can see whether their threshold looks reasonable at a glance.
+  function withRate(bossName, kc, unit = 'KC') {
+    const kph = storage.resolveKillsPerHour(bossName);
+    const rateNote = kph != null ? ` *(~${kph}/hr)*` : '';
+    return `${bossName} — ${kc} ${unit}${rateNote}`;
+  }
+
   const embed = new EmbedBuilder()
     .setTitle('Upcoming Week Preview')
     .setDescription(`Set by **${pendingData.setBy || 'unknown'}** at ${pendingData.setAt || 'unknown time'}`)
     .setColor(0x3498db) // Blue
     .addFields(
-      { name: 'Solo Midgame Boss', value: `${pendingData.soloMidgameBoss} — ${pendingData.soloMidgameKc} KC`, inline: true },
-      { name: 'Group Midgame Boss', value: `${pendingData.groupMidgameBoss} — ${pendingData.groupMidgameKc} KC`, inline: true },
-      { name: '​', value: '​', inline: false }, // empty line spacer
-      { name: 'Solo Endgame Boss', value: `${pendingData.soloEndgameBoss} — ${pendingData.soloEndgameKc} KC`, inline: true },
-      { name: 'Group Endgame Boss', value: `${pendingData.groupEndgameBoss} — ${pendingData.groupEndgameKc} KC`, inline: true },
+      { name: 'Solo Midgame Boss',  value: withRate(pendingData.soloMidgameBoss, pendingData.soloMidgameKc),   inline: true },
+      { name: 'Group Midgame Boss', value: withRate(pendingData.groupMidgameBoss, pendingData.groupMidgameKc), inline: true },
       { name: '​', value: '​', inline: false },
-      { name: 'Raid of the Week', value: `${pendingData.raid} — ${pendingData.raidCompletions} completions`, inline: true },
-      { name: 'Slayer Boss', value: `${pendingData.slayerBoss} — ${pendingData.slayerKc} KC`, inline: true },
+      { name: 'Solo Endgame Boss',  value: withRate(pendingData.soloEndgameBoss, pendingData.soloEndgameKc),   inline: true },
+      { name: 'Group Endgame Boss', value: withRate(pendingData.groupEndgameBoss, pendingData.groupEndgameKc), inline: true },
+      { name: '​', value: '​', inline: false },
+      { name: 'Raid of the Week',   value: withRate(pendingData.raid, pendingData.raidCompletions, 'completions'), inline: true },
+      { name: 'Slayer Boss',        value: withRate(pendingData.slayerBoss, pendingData.slayerKc),              inline: true },
       { name: 'Skill of the Week 1', value: pendingData.skill1 || 'Random (chosen on Monday)', inline: true },
       { name: 'Skill of the Week 2', value: pendingData.skill2 || 'Random (chosen on Monday)', inline: true }
     )
     .setFooter({ text: 'These settings will go live Monday at 3:00am Central' });
 
   await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+}
+
+// Handles /setbossrate — saves a kills/completions per hour override for a specific boss,
+// or removes the override and reverts to the built-in default if reset:True is passed.
+async function handleSetBossRate(interaction) {
+  if (!userHasStaffRole(interaction)) {
+    await interaction.reply({ content: 'You need the Staff role to use this command.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  const bossName     = interaction.options.getString('boss');
+  const killsPerHour = interaction.options.getInteger('kills_per_hour');
+  const shouldReset  = interaction.options.getBoolean('reset') ?? false;
+
+  // Validate: must provide either kills_per_hour or reset, not neither
+  if (!shouldReset && killsPerHour == null) {
+    await interaction.reply({
+      content: 'Please provide either a `kills_per_hour` value or set `reset: True` to revert to the default.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  try {
+    const existing = storage.readBossThresholds();
+
+    if (shouldReset) {
+      // Remove the override so the default from config.js takes effect
+      delete existing[bossName];
+      storage.writeBossThresholds(existing);
+
+      const defaultRate = config.defaultKillsPerHour[bossName];
+      const defaultNote = defaultRate != null ? ` The built-in default is **${defaultRate}/hr**.` : ' No built-in default exists for this boss.';
+      await interaction.reply({
+        content: `Reset **${bossName}** — your override has been removed.${defaultNote}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      console.log(`[bot] /setbossrate reset by ${interaction.user.tag} — ${bossName} reverted to default`);
+    } else {
+      existing[bossName] = killsPerHour;
+      storage.writeBossThresholds(existing);
+
+      await interaction.reply({
+        content: `Updated **${bossName}** to **${killsPerHour}/hr**. This will be reflected in /preview recommendations.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      console.log(`[bot] /setbossrate used by ${interaction.user.tag} — ${bossName}: ${killsPerHour}/hr`);
+    }
+  } catch (error) {
+    console.error('[bot] Error in /setbossrate:', error.message);
+    await interaction.reply({ content: `Something went wrong: ${error.message}`, flags: MessageFlags.Ephemeral });
+  }
 }
 
 // Handles /setchannel — saves a channel ID to channels.json so the bot knows where to post.
@@ -431,6 +508,8 @@ async function createAndStartBot() {
         await handleSetWeek(interaction);
       } else if (commandName === 'preview') {
         await handlePreview(interaction);
+      } else if (commandName === 'setbossrate') {
+        await handleSetBossRate(interaction);
       } else if (commandName === 'setchannel') {
         await handleSetChannel(interaction);
       } else if (commandName === 'setschedule') {

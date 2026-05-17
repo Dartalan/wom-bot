@@ -41,6 +41,7 @@ All commands are restricted to the **Staff** role.
 
 | Command | What it does |
 |---|---|
+| `/setbossrate` | Set or reset the estimated kills/completions per hour for a boss. Shown in `/preview` as a reference when choosing a KC threshold. |
 | `/setchannel` | Set which Discord channel the bot posts announcements/reports or staff alerts to. |
 | `/setweek` | Set the bosses, raids, thresholds, and optionally the skills for the upcoming week. |
 | `/preview` | Shows what's currently saved for the upcoming week as a formatted embed — use this to double-check before competitions start. |
@@ -68,6 +69,27 @@ The boss and raid fields have a live-search dropdown — just start typing and p
 | `slayer_kc` | KC players need to reach |
 | `skill_1` | Skill of the Week 1 (searchable dropdown) — leave blank to randomize |
 | `skill_2` | Skill of the Week 2 (searchable dropdown) — leave blank to randomize |
+
+### Using `/setbossrate`
+
+Sets the estimated kills or completions per hour for a boss, which is shown in `/preview` next to the KC threshold staff entered so they can judge whether it's too easy or too hard. Built-in defaults are sourced from the OSRS wiki at 75% of the benchmark rate for a well-geared player.
+
+| Option | Description |
+|---|---|
+| `boss` | Boss or raid name (searchable dropdown) |
+| `kills_per_hour` | Your estimate — leave blank if using `reset` |
+| `reset` | Set to `True` to remove your override and revert to the built-in default |
+
+Example: `/setbossrate boss:Kraken kills_per_hour:50` or `/setbossrate boss:Kraken reset:True`
+
+### Using `/setchannel`
+
+| Option | Description |
+|---|---|
+| `type` | `Announcements & Reports` — weekly post and results; or `Staff Alerts` — /setweek reminder ping |
+| `channel` | Pick a channel from the dropdown |
+
+Channel settings are saved to `data/channels.json` and survive restarts. The env vars `DISCORD_ANNOUNCEMENT_CHANNEL_ID` and `DISCORD_STAFF_CHANNEL_ID` act as fallbacks if `/setchannel` hasn't been run yet.
 
 ### Using `/setschedule`
 
@@ -140,7 +162,8 @@ wom-bot/
 │   ├── weeks.json          Active week's competition IDs and config
 │   ├── skill-history.json  Last 8 randomly chosen skills (prevents repeats)
 │   ├── schedule.json       Competition schedule saved by /setschedule
-│   └── channels.json       Channel IDs saved by /setchannel
+│   ├── channels.json       Channel IDs saved by /setchannel
+│   └── boss-thresholds.json  Per-boss KPH overrides saved by /setbossrate
 ├── config.js           Tunable settings (skill list, XP threshold, timezone, default schedule)
 └── .env                Secrets — never commit this file
 ```
@@ -170,4 +193,4 @@ The repeat-avoidance history only applies to **randomly chosen** skills. If staf
 - **Submissions for points** — automatically create a "Submissions for points" competition or post alongside the weekly announcement
 - **Configurable boss dropdowns** — allow each `/setweek` boss category (midgame, endgame, slayer, etc.) to have its own curated dropdown list rather than showing all bosses for every field
 - **Timezone configurability** — remove the hardcoded dependency on Central time so the bot can be used by clans in other timezones
-- **Recommended thresholds** — show suggested XP and KC thresholds per boss/skill in the `/setweek` command so staff have a reference when setting up the week
+- **Recommended thresholds** — ✅ done via `/setbossrate` and `/preview`; skill XP thresholds could also show a recommended weekly goal
