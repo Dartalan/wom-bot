@@ -185,6 +185,92 @@ wom-bot/
 
 Only players who hit 150k XP in **both** Skill of the Week competitions are listed in the report. Completing just one does not count.
 
+---
+
+## Boss reference
+
+Default kills/completions per hour shown in `/preview` when choosing a KC threshold. Values are sourced from the OSRS wiki money making guides at 75%, or estimated at 75% where no wiki page exists. Override any value with `/setbossrate`.
+
+**Group eligible** indicates whether multiple players can fight the same boss together. Solo-only bosses will not appear in the group boss dropdown.
+
+### Midgame bosses (Easy / Medium / Hard tier)
+
+| Boss | Group Eligible | Default KPH | Source |
+|---|---|---|---|
+| Abyssal Sire | No | 29 | Wiki |
+| Alchemical Hydra | No | 19 | Wiki |
+| Amoxliatl | No | 11 | Est. |
+| Araxxor | No | 26 | Wiki |
+| Artio | Yes | 34 | Est. |
+| Barrows Chests | Yes | 11 | Est. |
+| Bryophyta | No | 11 | Est. |
+| Cal'varion | Yes | 26 | Est. |
+| Callisto | Yes | 14 | Est. |
+| Cerberus | No | 38 | Wiki |
+| Chaos Elemental | Yes | 23 | Est. |
+| Chaos Fanatic | Yes | 45 | Est. |
+| Commander Zilyana | Yes | 20 | Wiki |
+| Corporeal Beast | Yes | 8 | Wiki |
+| Crazy Archaeologist | Yes | 45 | Est. |
+| Dagannoth Prime | Yes | 19 | Wiki |
+| Dagannoth Rex | Yes | 19 | Wiki |
+| Dagannoth Supreme | Yes | 19 | Wiki |
+| Deranged Archaeologist | Yes | 45 | Est. |
+| The Gauntlet | No | 5 | Wiki |
+| Giant Mole | Yes | 34 | Est. |
+| Grotesque Guardians | No | 18 | Wiki |
+| Hespori | No | — | Key-gated |
+| Hueycoatl | Yes | 11 | Est. |
+| Kalphite Queen | Yes | 17 | Wiki |
+| King Black Dragon | Yes | 30 | Est. |
+| Kraken | No | 45 | Wiki |
+| K'ril Tsutsaroth | Yes | 20 | Wiki |
+| Mimic | No | — | Casket-gated |
+| Obor | No | 30 | Est. |
+| Sarachnis | Yes | 23 | Wiki |
+| Scorpia | Yes | 45 | Est. |
+| Scurrius | Yes | 21 | Est. |
+| Skotizo | No | — | Totem-gated |
+| Spindel | Yes | 21 | Est. |
+| Tempoross | Yes | 8 | Est. |
+| Thermonuclear Smoke Devil | No | 60 | Wiki |
+| TzTok-Jad | No | 2 | Est. |
+| Venenatis | Yes | 19 | Est. |
+| Vet'ion | Yes | 14 | Est. |
+| Wintertodt | Yes | 8 | Est. |
+| Zalcano | Yes | 11 | Est. |
+
+### Endgame bosses (Elite tier and above)
+
+| Boss | Group Eligible | Default KPH | Source |
+|---|---|---|---|
+| The Corrupted Gauntlet | No | 5 | Wiki |
+| Duke Sucellus | No | 26 | Wiki |
+| General Graardor | Yes | 20 | Wiki |
+| Kree'Arra | Yes | 20 | Wiki |
+| The Leviathan | No | 18 | Wiki |
+| Nex | Yes | 5 | Wiki |
+| The Nightmare | Yes | 10 | Est. |
+| Phantom Muspah | No | 19 | Wiki |
+| Phosani's Nightmare | No | 8 | Est. |
+| Sol Heredit | No | 3 | Est. |
+| TzKal-Zuk | No | 1 | Est. |
+| Vardorvis | No | 24 | Wiki |
+| Vorkath | No | 23 | Wiki |
+| The Whisperer | No | 15 | Wiki |
+| Zulrah | No | 15 | Wiki |
+
+### Raids (all group eligible, all endgame)
+
+| Raid | Default Completions/hr | Source |
+|---|---|---|
+| Chambers of Xeric | 2 | Wiki |
+| Chambers of Xeric: Challenge Mode | 2 | Est. |
+| Theatre of Blood | 2 | Wiki |
+| Theatre of Blood: Hard Mode | 1 | — |
+| Tombs of Amascut | 2 | Est. |
+| Tombs of Amascut: Expert Mode | 2 | Est. |
+
 The repeat-avoidance history only applies to **randomly chosen** skills. If staff manually picks a skill via `/setweek`, it will be used regardless of recent history — but it will still be recorded so the random picker avoids it in future weeks.
 
 ---
