@@ -1,0 +1,16 @@
+{
+  "soloMidgameBoss": "Alchemical Hydra",
+  "soloMidgameKc": 10,
+  "groupMidgameBoss": "General Graardor",
+  "groupMidgameKc": 1,
+  "soloEndgameBoss": "Cal'varion",
+  "soloEndgameKc": 1,
+  "groupEndgameBoss": "Callisto",
+  "groupEndgameKc": 1,
+  "raid": "Tombs of Amascut",
+  "raidCompletions": 1,
+  "slayerBoss": "Kraken",
+  "slayerKc": 1,
+  "setAt": "2026-05-17T17:59:32.711Z",
+  "setBy": "dartalan"
+}

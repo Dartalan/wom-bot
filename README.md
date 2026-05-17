@@ -1,1 +1,161 @@
 # wom-bot
+
+A Discord bot for **The Duke Clan** that automatically runs weekly OSRS competitions through [Wise Old Man](https://wiseoldman.net). By default, competitions start every **Monday at 3:00am Central**, run for 7 days, and results are posted 24 hours after the competition ends. The schedule is fully configurable via `/setschedule` without touching the code.
+
+---
+
+## What it does
+
+### The day before competitions start — noon Central
+- Checks whether `/setweek` has been run since the current competition week started
+- If it **hasn't** been run yet, posts a message to the competition channel that **pings the Staff role** as a reminder
+- If `/setweek` was already run, nothing happens
+
+### Competition start day (default: Monday at 3:00am Central)
+- Randomly picks **two non-combat skills** for Skill of the Week, or uses the skills staff specified in `/setweek` (avoids repeating randomly chosen skills from the last 4 weeks)
+- Creates **six Wise Old Man competitions** for the week:
+  - Skill of the Week ×2
+  - Solo Midgame Boss
+  - Solo Endgame Boss
+  - Raid of the Week
+  - Slayer Boss
+- Posts a **weekly announcement embed** to the configured Discord channel with links to each competition and the KC/completion thresholds
+- Also announces the two **Group Bosses** (no WOM competition — these are manually enforced by staff)
+
+### 24 hours after competition ends (default: Tuesday at 2:59am Central)
+- Triggers a **WOM update-all** to refresh every clan member's stats (WOM only re-fetches stats after 24+ hours, so waiting until exactly 24 hours after the competition ends guarantees a fresh update)
+- If all members are already up to date, skips the 60-second wait and fetches immediately
+- Fetches results from all six WOM competitions
+- Posts a **results report** showing:
+  - Who completed **both** Skills of the Week (150,000+ XP in each — players who only finished one are not listed)
+  - Who hit the KC threshold for the Solo Midgame Boss, Solo Endgame Boss, Raid, and Slayer Boss
+  - A reminder about the Group Boss goals
+  - A warning if any players' data couldn't be refreshed in time
+- If the report is too long for a single Discord message, it automatically splits into one message per competition
+
+---
+
+## Slash commands
+
+All commands are restricted to the **Staff** role.
+
+| Command | What it does |
+|---|---|
+| `/setweek` | Set the bosses, raids, thresholds, and optionally the skills for the upcoming week. |
+| `/preview` | Shows what's currently saved for the upcoming week as a formatted embed — use this to double-check before competitions start. |
+| `/setschedule` | Change the day and time competitions start each week. Takes effect immediately — no bot restart needed. |
+| `/createcompetitions` | Manually triggers competition creation right now. Detects and skips any competitions already created this week — safe to run more than once. Add `dry_run: True` to test without creating anything. |
+| `/report` | Manually triggers the end-of-week results report right now. Add `dry_run: True` to test without posting. |
+
+### Using `/setweek`
+
+The boss and raid fields have a live-search dropdown — just start typing and pick from the list. Skill fields are optional — leave them blank to randomize.
+
+| Option | Description |
+|---|---|
+| `solo_midgame_boss` | Boss name (searchable dropdown) |
+| `solo_midgame_kc` | KC players need to reach |
+| `group_midgame_boss` | Group boss name (manually enforced, no WOM tracking) |
+| `group_midgame_kc` | KC goal for the group |
+| `solo_endgame_boss` | Boss name (searchable dropdown) |
+| `solo_endgame_kc` | KC players need to reach |
+| `group_endgame_boss` | Group boss name (manually enforced, no WOM tracking) |
+| `group_endgame_kc` | KC goal for the group |
+| `raid` | Raid name (searchable dropdown — shows raids only) |
+| `raid_completions` | Number of completions players need |
+| `slayer_boss` | Slayer boss name (searchable dropdown) |
+| `slayer_kc` | KC players need to reach |
+| `skill_1` | Skill of the Week 1 (searchable dropdown) — leave blank to randomize |
+| `skill_2` | Skill of the Week 2 (searchable dropdown) — leave blank to randomize |
+
+### Using `/setschedule`
+
+| Option | Description |
+|---|---|
+| `day` | Day of week — dropdown (Sunday through Saturday) |
+| `hour` | Hour in 24-hour Central time (0 = midnight, 15 = 3pm) |
+| `minute` | Minute (optional, defaults to 0) |
+
+The end-of-week report (24h after competition ends) and the day-before reminder are derived automatically from whatever start time you set — you never configure those separately.
+
+---
+
+## Weekly workflow for staff
+
+1. **Any time before noon the day before competitions start** — run `/setweek` and fill in the bosses, thresholds, and optionally the skills
+2. Run `/preview` to confirm everything looks right
+3. **If you forget**, the bot will ping the Staff role at noon the day before as a reminder
+4. That's it — the bot handles competition creation, the announcement, and the results report automatically
+
+If you need to test or re-run something manually, use `/createcompetitions dry_run:True` or `/report dry_run:True` to see what would happen without actually posting anything.
+
+---
+
+## Setup
+
+### Requirements
+- [Node.js](https://nodejs.org) v18 or higher
+- A Discord bot token ([create one here](https://discord.com/developers/applications))
+- A Wise Old Man group with a verification code
+
+### Installation
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy the example env file and fill in your values
+cp .env.example .env
+
+# 3. Start the bot
+node src/index.js
+```
+
+### Environment variables (`.env`)
+
+| Variable | Description |
+|---|---|
+| `DISCORD_TOKEN` | Your Discord bot token |
+| `DISCORD_CHANNEL_ID` | ID of the channel where announcements and reports are posted |
+| `WOM_GROUP_ID` | Your Wise Old Man group ID |
+| `WOM_VERIFICATION_CODE` | Your Wise Old Man group verification code |
+
+---
+
+## File structure
+
+```
+wom-bot/
+├── src/
+│   ├── index.js        Entry point — starts the bot and scheduler
+│   ├── bot.js          Discord client, slash commands, interaction handling
+│   ├── scheduler.js    Cron jobs, competition creation, Discord embeds
+│   ├── wom.js          All Wise Old Man API calls
+│   ├── storage.js      Reading and writing data files
+│   └── bosses.js       Boss/raid lists for autocomplete dropdowns
+├── data/
+│   ├── pending.json        Saved by /setweek, applied at competition start
+│   ├── weeks.json          Active week's competition IDs and config
+│   ├── skill-history.json  Last 8 randomly chosen skills (prevents repeats)
+│   └── schedule.json       Competition schedule saved by /setschedule
+├── config.js           Tunable settings (skill list, XP threshold, timezone, default schedule)
+└── .env                Secrets — never commit this file
+```
+
+---
+
+## Competitions created each week
+
+| Competition | Tracked in WOM | Threshold |
+|---|---|---|
+| Skill of the Week ×2 | Yes | 150,000 XP each |
+| Solo Midgame Boss | Yes | Set by staff each week |
+| Solo Endgame Boss | Yes | Set by staff each week |
+| Raid of the Week | Yes | Set by staff each week |
+| Slayer Boss | Yes | Set by staff each week |
+| Group Midgame Boss | No (manually enforced) | Set by staff each week |
+| Group Endgame Boss | No (manually enforced) | Set by staff each week |
+
+Only players who hit 150k XP in **both** Skill of the Week competitions are listed in the report. Completing just one does not count.
+
+The repeat-avoidance history only applies to **randomly chosen** skills. If staff manually picks a skill via `/setweek`, it will be used regardless of recent history — but it will still be recorded so the random picker avoids it in future weeks.

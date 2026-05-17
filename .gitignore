@@ -1,0 +1,8 @@
+# Secrets — never commit this
+.env
+
+# Dependencies — installed locally via npm install
+node_modules/
+
+# Claude Code settings
+.claude/

@@ -1,0 +1,6 @@
+{
+  "_note": "Competition start time. Change this with /setschedule in Discord — do not edit by hand. startDay: 0=Sunday 1=Monday 2=Tuesday 3=Wednesday 4=Thursday 5=Friday 6=Saturday",
+  "startDay": 1,
+  "startHour": 3,
+  "startMinute": 0
+}
